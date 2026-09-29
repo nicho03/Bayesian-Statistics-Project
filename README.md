@@ -2,8 +2,6 @@
 
 Project for the Bayesian Statistics course — Politecnico di Milano, A.Y. 2025-2026
 
-**Authors:** Nalini Lorenzo, Conte Francesco Emanuele, Hinterwaldner Nicholas, Pellizzari Sofia, Tolledi Simone, Lombardi Sofia
-
 ## What this is about
 
 The Generalized Hyperbolic Secant (GHS) is one of the six distributions that make up the Natural
