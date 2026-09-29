@@ -78,7 +78,7 @@ A few choices in the code that go beyond what's in the report:
   `gammaz()` is only evaluated in the Metropolis-Hastings step for r, where it can't be avoided.
   
 - **Beta is sampled in a whitened parametrization.** The report's formula for the MALA proposal
-  (Sec. 3.2/4.2) is written directly on beta. The code instead samples a standard multivariate Gaussian z and maps it into beta via beta = mu_prior + L %*% z, where L is the Cholesky factor of the prior covariance matrix. This way, the prior gradient in z-space collapses to -z, so the inverse prior covariance matrix — needed to evaluate the prior gradient directly on beta — never has to be formed at all. Only L is computed, once, outside the MCMC loop, and reused at every iteration to map z into beta.
+  (Sec. 3.2/4.2) is written directly on beta. The code instead samples a standard multivariate Gaussian z and maps it into beta via `beta = mu_prior + L %*% z`, where L is the Cholesky factor of the prior covariance matrix. This way, the prior gradient in z-space collapses to -z, so the inverse prior covariance matrix — needed to evaluate the prior gradient directly on beta — never has to be formed at all. Only L is computed, once, outside the MCMC loop, and reused at every iteration to map z into beta.
 
 
 ## Key results
