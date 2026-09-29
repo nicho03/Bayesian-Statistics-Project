@@ -58,7 +58,7 @@ install.packages(c("pracma", "progress", "coda", "ggplot2", "patchwork", "nycfli
 
 ```r
 source("simulated_data_analysis.R")  # a few minutes, n = 2000
-source("temperature_analysis.R")     # several minutes, n ≈ 26,000
+source("temperature_analysis.R")     # around 11 mins on Colab, n ≈ 26,000
 ```
 
 ## Implementation notes
@@ -67,28 +67,19 @@ A few choices in the code that go beyond what's in the report:
 
 - **Adaptive step size for MALA.** The report explains *that* the MALA step size ε is tuned
   during burn-in to hit a target acceptance rate (0.574, per Roberts & Rosenthal, 1998), but not
-  the exact update rule. The code uses a Robbins-Monro-type recursion:
+  the exact update rule. The code uses a recursion of the form:
   `log(ε) ← log(ε) + γ_k · (α̂ − target)`, where `α̂` is the running acceptance rate and
-  `γ_k = k^(-0.7)` shrinks with the iteration count `k`. This adaptive tuning is what makes MALA
-  practical here: a fixed, badly-chosen ε either rejects almost every proposal (too large) or
-  barely moves the chain (too small) — both kill mixing, which is exactly what the acceptance-rate
-  target is designed to avoid.
+  `γ_k = k^(-0.7)` shrinks with the iteration count `k`. During the simulations, it was impossible to achieve good mixing     using a fixed ε: it either rejected almost every proposal (if too large) or barely moved the chain (if too small).
 
 - **The MALA step for beta never calls the complex Gamma function.** The full GHS log-likelihood
   includes a term with `gammaz()`, expensive to evaluate on a dataset with tens of thousands of
   points. When updating beta with r held fixed, that term (and the rest of the normalizing
-  constant) doesn't depend on beta, so it cancels in the MALA acceptance ratio and is dropped from
-  `log_lik()`. `gammaz()` is only evaluated in the Metropolis-Hastings step for r, where it can't
-  be avoided.
-
+  constant) doesn't depend on beta and therefore it can be dropped from `log_lik()`.
+  `gammaz()` is only evaluated in the Metropolis-Hastings step for r, where it can't be avoided.
+  
 - **Beta is sampled in a whitened parametrization.** The report's formula for the MALA proposal
-  (Sec. 3.2/4.2) is written directly on beta with an isotropic proposal. The code instead samples
-  `z`, related to beta by `beta = mu_prior + L %*% z` where `L` is the Cholesky factor of the prior
-  covariance (`S_prior`) — so a standard normal prior on `z` corresponds exactly to the actual
-  Gaussian prior on beta. This whitening (not a matrix inversion — `chol()` here builds the
-  transformation, it isn't used to invert anything) lets a single scalar step size work well even
-  when the prior covariance is far from diagonal, since the proposal automatically respects the
-  correlation structure between coefficients instead of proposing each one independently.
+  (Sec. 3.2/4.2) is written directly on beta. The code instead samples a standard multivariate Gaussian z and maps it into beta via beta = mu_prior + L %*% z, where L is the Cholesky factor of the prior covariance matrix. This way, the prior gradient in z-space collapses to -z, so the inverse prior covariance matrix — needed to evaluate the prior gradient directly on beta — never has to be formed at all. Only L is computed, once, outside the MCMC loop, and reused at every iteration to map z into beta.
+
 
 ## Key results
 
@@ -97,16 +88,9 @@ A few choices in the code that go beyond what's in the report:
 - On the NYC temperature dataset, the GHS GLM outperforms a Bayesian Gaussian linear model in
   terms of WAIC, consistent with the heteroskedasticity and heavy tails detected in exploratory
   analysis.
-- Credible intervals and Bayes factors mostly agree on which covariates matter, but not always:
-  for a couple of coefficients the 95% credible interval includes zero while the Bayes factor
-  still favours inclusion strongly. This isn't a bug — it's a known consequence of comparing a
-  point-null Bayes factor against an interval estimate under a fairly diffuse prior (related to
-  the Jeffreys-Lindley phenomenon), and it's a good reminder that the two criteria answer
-  different questions rather than being interchangeable.
 
 ## Limitations
 
 The GHS GLM only pays off when the data's variance actually grows quadratically with the mean, the
 specific relationship the GHS imposes. When that assumption doesn't hold, a standard Bayesian
-Gaussian linear model tends to be more robust — see the report for a worked example (election
-prediction errors) where the GHS underperforms for exactly this reason.
+Gaussian linear model tends to be more robust.
